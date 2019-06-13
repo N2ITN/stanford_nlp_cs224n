@@ -1,0 +1,12 @@
+*.md
+*.pyc
+*.pkl
+*.json
+*.txt
+*.yml
+*.sh
+dev*
+test*
+train*
+.DS_Store
+*.pdf
