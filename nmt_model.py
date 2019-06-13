@@ -296,7 +296,28 @@ class NMT(nn.Module):
         ###     Tensor Stacking:
         ###         https://pytorch.org/docs/stable/torch.html#torch.stack
 
+        enc_hiddens_proj = self.att_projection(enc_hiddens)
+        Y = self.model_embeddings.source(target_padded)
+        
+        
 
+        for Y_t in torch.split(Y,1):
+            
+            Y_t = torch.squeeze(Y_t,dim=0)
+            Ybar_t =torch.cat((Y_t,o_prev))
+            dec_state, combined_output, e_t = self.step(Ybar_t,
+            dec_state,
+            enc_hiddens,
+            enc_hiddens_proj,
+            enc_masks)
+            # o_t = self.decoder(Ybar_t)
+            # cell, state= o_t
+            combined_outputs.append(combined_output)
+            o_prev = combined_output
+            # o_prev = o_t
+                
+        
+        combined_outputs = torch.stack(combined_outputs)
         ### END YOUR CODE
 
         return combined_outputs
