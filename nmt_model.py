@@ -318,7 +318,7 @@ class NMT(nn.Module):
         combined_outputs = torch.stack(combined_outputs)
         # END YOUR CODE
         self.run_tracker['decode'] +=1
-        # print(self.run_tracker)
+        print(self.run_tracker)
         return combined_outputs
 
     def step(self, Ybar_t: torch.Tensor,
@@ -446,7 +446,7 @@ class NMT(nn.Module):
 
         combined_output = O_t
         self.run_tracker['step'] +=1
-        print(self.run_tracker)
+        # print(self.run_tracker)
         return dec_state, combined_output, e_t
 
     def generate_sent_masks(self, enc_hiddens: torch.Tensor, source_lengths: List[int]) -> torch.Tensor:
