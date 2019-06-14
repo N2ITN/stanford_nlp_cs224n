@@ -73,22 +73,19 @@ class NMT(nn.Module):
         # Dropout Layer:
         # https://pytorch.org/docs/stable/nn.html#torch.nn.Dropout
 
-        self.encoder = nn.LSTM(
-            input_size=embed_size,
-            hidden_size=self.hidden_size,
-            bias=True,
-            bidirectional=True
-        )
-
-        self.decoder = nn.LSTMCell(
-            input_size=self.hidden_size*2,
-            hidden_size=self.hidden_size,
-            bias=True
-        )
         print(embed_size)
         print(self.hidden_size)
         print()
 
+        self.encoder = nn.LSTM(
+            input_size=embed_size,
+            hidden_size=self.hidden_size,
+            bias=True,
+            bidirectional=True)
+        self.decoder = nn.LSTMCell(
+            input_size=self.hidden_size*2,
+            hidden_size=self.hidden_size,
+            bias=True)
         self.h_projection = nn.Linear(
             in_features=self.hidden_size*2,
             out_features=self.hidden_size,
@@ -106,11 +103,11 @@ class NMT(nn.Module):
             out_features=self.hidden_size,
             bias=False)
         self.target_vocab_projection = nn.Linear(
-            in_features=self.hidden_size+self.hidden_size*2,
-            out_features=self.hidden_size,
+            in_features=self.hidden_size,
+            out_features=embed_size**2,
             bias=False)
         self.dropout = nn.Dropout(p=dropout_rate)
-
+        self.run_tracker = {k:0 for k in ['decode','encode','step']}
         # END YOUR CODE
 
     def forward(self, source: List[List[str]], target: List[List[str]]) -> torch.Tensor:
@@ -147,6 +144,14 @@ class NMT(nn.Module):
         target_masks = (target_padded != self.vocab.tgt['<pad>']).float()
 
         # Compute log probability of generating true target words
+
+        # print(target_masks.size(),target_masks[1:].size(),target_padded.size(),)
+
+        # print(P)
+        # print(target_padded[1:])
+        # print(P.size(),target_padded[1:].size())
+
+
         target_gold_words_log_prob = torch.gather(
             P, index=target_padded[1:].unsqueeze(-1), dim=-1).squeeze(-1) * target_masks[1:]
         scores = target_gold_words_log_prob.sum(dim=0)
@@ -201,17 +206,20 @@ class NMT(nn.Module):
         # https://pytorch.org/docs/stable/tensors.html#torch.Tensor.permute
 
         X = self.model_embeddings.source(source_padded)
-        print(source_padded.size(), X.size(), source_lengths)
+        # print(source_padded.size(), X.size(), source_lengths)
         X = nn.utils.rnn.pack_padded_sequence(input=X, lengths=source_lengths)
-        print(source_padded.size(), X.batch_sizes)
+        # print(source_padded.size(), X.batch_sizes)
         enc_hiddens, (last_hidden, last_cell) = self.encoder(X)
+
         enc_hiddens = torch.nn.utils.rnn.pad_packed_sequence(enc_hiddens)[0].permute(1, 0, 2)
-        print(enc_hiddens.size(), last_hidden.size())
+        # print(enc_hiddens.size())
+
+        # print(enc_hiddens.size(), last_hidden.size())
         ####
 
         ####
         hidden_concat = torch.cat([last_hidden[0], last_hidden[1]], dim=1)
-        print(hidden_concat)
+        # print(hidden_concat)
 
         init_decoder_hidden = self.h_projection(hidden_concat)
         cell_concat = torch.cat([last_cell[0], last_cell[1]], dim=1)
@@ -221,7 +229,8 @@ class NMT(nn.Module):
         dec_init_state = (init_decoder_hidden, init_decoder_cell)
 
         # END YOUR CODE
-
+        self.run_tracker['encode'] +=1
+        print(self.run_tracker)
         return enc_hiddens, dec_init_state
 
     def decode(self, enc_hiddens: torch.Tensor, enc_masks: torch.Tensor,
@@ -294,7 +303,7 @@ class NMT(nn.Module):
         for Y_t in torch.split(Y, 1):
 
             Y_t = torch.squeeze(Y_t, dim=0)
-            Ybar_t = torch.cat((Y_t, o_prev))
+            Ybar_t = torch.cat((Y_t, o_prev),dim=1)
             dec_state, combined_output, e_t = self.step(Ybar_t,
                                                         dec_state,
                                                         enc_hiddens,
@@ -308,7 +317,8 @@ class NMT(nn.Module):
 
         combined_outputs = torch.stack(combined_outputs)
         # END YOUR CODE
-
+        self.run_tracker['decode'] +=1
+        print(self.run_tracker)
         return combined_outputs
 
     def step(self, Ybar_t: torch.Tensor,
@@ -362,20 +372,21 @@ class NMT(nn.Module):
         # https://pytorch.org/docs/stable/torch.html#torch.unsqueeze
         # Tensor Squeeze:
         # https://pytorch.org/docs/stable/torch.html#torch.squeeze
-
+        # print('ybar', Ybar_t.size(), 'dec_state', dec_state[0].size(), dec_state[1].size())
         dec_state = self.decoder(Ybar_t, dec_state)
+        # print('it worked')
         dec_hidden, dec_cell = dec_state
 
         _dh = torch.unsqueeze(dec_hidden, dim=1)
 
         _ehp = enc_hiddens_proj.permute(0, 2, 1)
-        print(dec_hidden.size(), enc_hiddens_proj.size())
-        print(_dh.size(), _ehp.size())
+        # print(dec_hidden.size(), enc_hiddens_proj.size())
+        # print(_dh.size(), _ehp.size())
         e_t = torch.bmm(_dh, _ehp)
-        print(e_t.size())
+        # print(e_t.size())
         e_t = torch.squeeze(e_t)
-        print(e_t.size())
-        print()
+        # print(e_t.size())
+        # print()
         # print(e_t.size())
 
         # print(enc_masks.size())
@@ -418,14 +429,14 @@ class NMT(nn.Module):
 
         _at = torch.unsqueeze(alpha_t, dim=1)
 
-        print(alpha_t.size(), enc_hiddens.size())
-        print(_at.size(), enc_hiddens.size())
+        # print(alpha_t.size(), enc_hiddens.size())
+        # print(_at.size(), enc_hiddens.size())
 
         a_t = torch.squeeze(torch.bmm(_at, enc_hiddens))
-        print(a_t.size(), dec_hidden.size())
-        print()
+        # print(a_t.size(), dec_hidden.size())
+        # print()
         U_t = torch.cat((dec_hidden, a_t), dim=1)
-        print(U_t.size())
+        # print(U_t.size())
 
         V_t = self.combined_output_projection(U_t)
         # print(V_t)
@@ -434,6 +445,8 @@ class NMT(nn.Module):
         # END YOUR CODE
 
         combined_output = O_t
+        self.run_tracker['step'] +=1
+        print(self.run_tracker)
         return dec_state, combined_output, e_t
 
     def generate_sent_masks(self, enc_hiddens: torch.Tensor, source_lengths: List[int]) -> torch.Tensor:
