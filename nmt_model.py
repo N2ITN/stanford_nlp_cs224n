@@ -230,7 +230,7 @@ class NMT(nn.Module):
 
         # END YOUR CODE
         self.run_tracker['encode'] +=1
-        print(self.run_tracker)
+        # print(self.run_tracker)
         return enc_hiddens, dec_init_state
 
     def decode(self, enc_hiddens: torch.Tensor, enc_masks: torch.Tensor,
@@ -318,7 +318,7 @@ class NMT(nn.Module):
         combined_outputs = torch.stack(combined_outputs)
         # END YOUR CODE
         self.run_tracker['decode'] +=1
-        print(self.run_tracker)
+        # print(self.run_tracker)
         return combined_outputs
 
     def step(self, Ybar_t: torch.Tensor,
