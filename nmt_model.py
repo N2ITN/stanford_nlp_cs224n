@@ -384,7 +384,7 @@ class NMT(nn.Module):
         # print(_dh.size(), _ehp.size())
         e_t = torch.bmm(_dh, _ehp)
         # print(e_t.size())
-        e_t = torch.squeeze(e_t)
+        e_t = torch.squeeze(e_t,dim=1)
         # print(e_t.size())
         # print()
         # print(e_t.size())
@@ -425,18 +425,18 @@ class NMT(nn.Module):
         # Tanh:
         # https://pytorch.org/docs/stable/torch.html#torch.tanh
 
-        alpha_t = torch.nn.functional.softmax(e_t, dim=1, _stacklevel=3, dtype=None)
+        alpha_t = torch.nn.functional.softmax(e_t, dim=1)
 
         _at = torch.unsqueeze(alpha_t, dim=1)
 
         # print(alpha_t.size(), enc_hiddens.size())
         # print(_at.size(), enc_hiddens.size())
 
-        a_t = torch.squeeze(torch.bmm(_at, enc_hiddens))
-        # print(a_t.size(), dec_hidden.size())
+        a_t = torch.squeeze(torch.bmm(_at, enc_hiddens),dim=1)
         # print()
         U_t = torch.cat((dec_hidden, a_t), dim=1)
-        # print(U_t.size())
+        # print('a_t',a_t.size(), 'dec_hidden', dec_hidden.size(),'U_t',U_t.size())
+        
 
         V_t = self.combined_output_projection(U_t)
         # print(V_t)
