@@ -435,7 +435,6 @@ class NMT(nn.Module):
         a_t = torch.squeeze(torch.bmm(_at, enc_hiddens),dim=1)
         # print()
         U_t = torch.cat((dec_hidden, a_t), dim=1)
-        # print('a_t',a_t.size(), 'dec_hidden', dec_hidden.size(),'U_t',U_t.size())
         
 
         V_t = self.combined_output_projection(U_t)
@@ -446,6 +445,7 @@ class NMT(nn.Module):
 
         combined_output = O_t
         self.run_tracker['step'] +=1
+        # print('a_t',a_t.size(), 'dec_hidden', dec_hidden.size(),'U_t',U_t.size())
         # print(self.run_tracker)
         return dec_state, combined_output, e_t
 
