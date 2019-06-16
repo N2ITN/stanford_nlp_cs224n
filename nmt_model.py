@@ -376,15 +376,17 @@ class NMT(nn.Module):
         dec_state = self.decoder(Ybar_t, dec_state)
         # print('it worked')
         dec_hidden, dec_cell = dec_state
-
-        _dh = torch.unsqueeze(dec_hidden, dim=1)
+        
+        '''_dh = torch.unsqueeze(dec_hidden, dim=1)
 
         _ehp = enc_hiddens_proj.permute(0, 2, 1)
         # print(dec_hidden.size(), enc_hiddens_proj.size())
         # print(_dh.size(), _ehp.size())
         e_t = torch.bmm(_dh, _ehp)
         # print(e_t.size())
-        e_t = torch.squeeze(e_t,dim=1)
+        e_t = torch.squeeze(e_t,dim=1)'''
+
+        e_t = enc_hiddens_proj.bmm(dec_hidden.unsqueeze(2)).squeeze(2)
         # print(e_t.size())
         # print()
         # print(e_t.size())
@@ -427,7 +429,7 @@ class NMT(nn.Module):
 
         alpha_t = torch.nn.functional.softmax(e_t, dim=1)
 
-        _at = torch.unsqueeze(alpha_t, dim=1)
+        '''_at = torch.unsqueeze(alpha_t, dim=1)
 
         # print(alpha_t.size(), enc_hiddens.size())
         # print(_at.size(), enc_hiddens.size())
@@ -439,6 +441,14 @@ class NMT(nn.Module):
 
         V_t = self.combined_output_projection(U_t)
         # print(V_t)
+        O_t = self.dropout(torch.tanh(V_t))'''
+
+        a_t_dims = (alpha_t.size(0), 1, alpha_t.size(1))
+        #a_t = torch.bmm(alpha_t.view(*a_t_dims), enc_hiddens).squeeze(1)
+        a_t = alpha_t.view(*a_t_dims).bmm(enc_hiddens).squeeze(1)
+        U_t = torch.cat((a_t, dec_hidden), 1)
+        #print(U_t.size())
+        V_t = self.combined_output_projection(U_t)
         O_t = self.dropout(torch.tanh(V_t))
 
         # END YOUR CODE
