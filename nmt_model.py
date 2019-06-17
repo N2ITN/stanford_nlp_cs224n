@@ -83,7 +83,7 @@ class NMT(nn.Module):
             bias=True,
             bidirectional=True)
         self.decoder = nn.LSTMCell(
-            input_size=self.hidden_size*2,
+            input_size=self.hidden_size+embed_size,
             hidden_size=self.hidden_size,
             bias=True)
         self.h_projection = nn.Linear(
@@ -99,12 +99,12 @@ class NMT(nn.Module):
             out_features=self.hidden_size,
             bias=False)
         self.combined_output_projection = nn.Linear(
-            in_features=self.hidden_size+self.hidden_size*2,
+            in_features=self.hidden_size*3,
             out_features=self.hidden_size,
             bias=False)
         self.target_vocab_projection = nn.Linear(
             in_features=self.hidden_size,
-            out_features=embed_size**2,
+            out_features=len(vocab.tgt),
             bias=False)
         self.dropout = nn.Dropout(p=dropout_rate)
         self.run_tracker = {k:0 for k in ['decode','encode','step']}
@@ -300,10 +300,10 @@ class NMT(nn.Module):
         enc_hiddens_proj = self.att_projection(enc_hiddens)
         Y = self.model_embeddings.source(target_padded)
 
-        for Y_t in torch.split(Y, 1):
+        for Y_t in torch.split(Y, 1, dim=0):
 
-            Y_t = torch.squeeze(Y_t, dim=0)
-            Ybar_t = torch.cat((Y_t, o_prev),dim=1)
+            Y_t = torch.squeeze(Y_t, dim=1)
+            Ybar_t = torch.cat((Y_t, o_prev), dim=1)
             dec_state, combined_output, e_t = self.step(Ybar_t,
                                                         dec_state,
                                                         enc_hiddens,
@@ -315,7 +315,7 @@ class NMT(nn.Module):
             o_prev = combined_output
             # o_prev = o_t
 
-        combined_outputs = torch.stack(combined_outputs)
+        combined_outputs = torch.stack(combined_outputs,dim=0)
         # END YOUR CODE
         self.run_tracker['decode'] +=1
         # print(self.run_tracker)
@@ -444,8 +444,8 @@ class NMT(nn.Module):
         O_t = self.dropout(torch.tanh(V_t))'''
 
         a_t_dims = (alpha_t.size(0), 1, alpha_t.size(1))
-        #a_t = torch.bmm(alpha_t.view(*a_t_dims), enc_hiddens).squeeze(1)
-        a_t = alpha_t.view(*a_t_dims).bmm(enc_hiddens).squeeze(1)
+        a_t = torch.bmm(alpha_t.view(*a_t_dims), enc_hiddens).squeeze(1)
+        # a_t = alpha_t.view(*a_t_dims).bmm(enc_hiddens).squeeze(1)
         U_t = torch.cat((a_t, dec_hidden), 1)
         #print(U_t.size())
         V_t = self.combined_output_projection(U_t)
