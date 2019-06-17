@@ -99,7 +99,7 @@ class NMT(nn.Module):
             out_features=self.hidden_size,
             bias=False)
         self.combined_output_projection = nn.Linear(
-            in_features=self.hidden_size*3,
+            in_features=self.hidden_size+self.hidden_size*2,
             out_features=self.hidden_size,
             bias=False)
         self.target_vocab_projection = nn.Linear(
@@ -107,7 +107,9 @@ class NMT(nn.Module):
             out_features=len(vocab.tgt),
             bias=False)
         self.dropout = nn.Dropout(p=dropout_rate)
-        self.run_tracker = {k:0 for k in ['decode','encode','step']}
+
+
+        self.run_tracker = {k: 0 for k in ['decode', 'encode', 'step']}
         # END YOUR CODE
 
     def forward(self, source: List[List[str]], target: List[List[str]]) -> torch.Tensor:
@@ -150,7 +152,6 @@ class NMT(nn.Module):
         # print(P)
         # print(target_padded[1:])
         # print(P.size(),target_padded[1:].size())
-
 
         target_gold_words_log_prob = torch.gather(
             P, index=target_padded[1:].unsqueeze(-1), dim=-1).squeeze(-1) * target_masks[1:]
@@ -229,7 +230,7 @@ class NMT(nn.Module):
         dec_init_state = (init_decoder_hidden, init_decoder_cell)
 
         # END YOUR CODE
-        self.run_tracker['encode'] +=1
+        self.run_tracker['encode'] += 1
         # print(self.run_tracker)
         return enc_hiddens, dec_init_state
 
@@ -302,7 +303,7 @@ class NMT(nn.Module):
 
         for Y_t in torch.split(Y, 1, dim=0):
 
-            Y_t = torch.squeeze(Y_t, dim=1)
+            Y_t = torch.squeeze(Y_t, dim=0)
             Ybar_t = torch.cat((Y_t, o_prev), dim=1)
             dec_state, combined_output, e_t = self.step(Ybar_t,
                                                         dec_state,
@@ -315,9 +316,9 @@ class NMT(nn.Module):
             o_prev = combined_output
             # o_prev = o_t
 
-        combined_outputs = torch.stack(combined_outputs,dim=0)
+        combined_outputs = torch.stack(combined_outputs, dim=0)
         # END YOUR CODE
-        self.run_tracker['decode'] +=1
+        self.run_tracker['decode'] += 1
         # print(self.run_tracker)
         return combined_outputs
 
@@ -376,7 +377,7 @@ class NMT(nn.Module):
         dec_state = self.decoder(Ybar_t, dec_state)
         # print('it worked')
         dec_hidden, dec_cell = dec_state
-        
+
         '''_dh = torch.unsqueeze(dec_hidden, dim=1)
 
         _ehp = enc_hiddens_proj.permute(0, 2, 1)
@@ -447,14 +448,14 @@ class NMT(nn.Module):
         a_t = torch.bmm(alpha_t.view(*a_t_dims), enc_hiddens).squeeze(1)
         # a_t = alpha_t.view(*a_t_dims).bmm(enc_hiddens).squeeze(1)
         U_t = torch.cat((a_t, dec_hidden), 1)
-        #print(U_t.size())
+        # print(U_t.size())
         V_t = self.combined_output_projection(U_t)
         O_t = self.dropout(torch.tanh(V_t))
 
         # END YOUR CODE
 
         combined_output = O_t
-        self.run_tracker['step'] +=1
+        self.run_tracker['step'] += 1
         # print('a_t',a_t.size(), 'dec_hidden', dec_hidden.size(),'U_t',U_t.size())
         # print(self.run_tracker)
         return dec_state, combined_output, e_t
