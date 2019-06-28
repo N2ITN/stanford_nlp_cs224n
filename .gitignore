@@ -10,3 +10,9 @@ test*
 train*
 .DS_Store
 *.pdf
+*.pickle
+*.npy
+*.bin
+*.weights
+*.optim
+*.ipynb_checkpoints/
