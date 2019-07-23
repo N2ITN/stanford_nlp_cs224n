@@ -8,6 +8,8 @@ Usage:
     sanity_check.py 1e
     sanity_check.py 1f
     sanity_check.py 1g
+    sanity_check.py 1h
+    sanity_check.py 1i
     sanity_check.py 1j
     sanity_check.py 2a
     sanity_check.py 2b
@@ -27,10 +29,11 @@ from typing import List, Tuple, Dict, Set, Union
 from tqdm import tqdm
 from utils import pad_sents_char, read_corpus, batch_iter
 from vocab import Vocab, VocabEntry
+from highway import Highway
 
 from char_decoder import CharDecoder
 from nmt_model import NMT
-
+from cnn import CNN
 
 import torch
 import torch.nn as nn
@@ -55,7 +58,7 @@ class DummyVocab():
 
 
 def question_1e_sanity_check():
-    """ Sanity check for words2charindices function. 
+    """ Sanity check for words2charindices function.
     """
     print("-"*80)
     print("Running Sanity Check for Question 1e: words2charindices()")
@@ -90,7 +93,7 @@ def question_1e_sanity_check():
 
 
 def question_1f_sanity_check():
-    """ Sanity check for pad_sents_char() function. 
+    """ Sanity check for pad_sents_char() function.
     """
     print("-"*80)
     print("Running Sanity Check for Question 1f: Padding")
@@ -127,13 +130,35 @@ def question_1g_sanity_check():
     assert padded_sentences == gold_padded_sentences, "Sentence padding is incorrect: it should be:\n {} but is:\n{}".format(
         gold_padded_sentences, padded_sentences)
 
-    print(vocab.to_input_tensor_char(padded_sentences, device='cpu'))
+    print(vocab.to_input_tensor_char(padded_sentences, device='cpu').shape)
 
     print("-"*80)
 
 
+def question_1h_sanity_check():
+    print("-"*80)
+    print("Running Sanity Check for Question 1h: Highway")
+    batch = torch.Tensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
+    highway = Highway(batch.shape[-1])
+    res = highway.forward(batch)
+    assert res.shape == batch.shape
+    print(res)
+    print("-"*80)
+
+
+def question_1i_sanity_check():
+    print("-"*80)
+    print("Running Sanity Check for Question 1i: CNN")
+    batch = torch.Tensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
+    cnn = CNN(batch.shape[-1])
+    res = cnn.forward(reshaped=batch)
+    print(res.shape)
+    print(res)
+    print("-"*80)
+
+
 def question_1j_sanity_check(model):
-    """ Sanity check for model_embeddings.py 
+    """ Sanity check for model_embeddings.py
             basic shape check
     """
     print("-"*80)
@@ -271,6 +296,10 @@ def main():
         question_1f_sanity_check()
     elif args['1g']:
         question_1g_sanity_check()
+    elif args['1h']:
+        question_1h_sanity_check()
+    elif args['1i']:
+        question_1i_sanity_check()
     elif args['1j']:
         question_1j_sanity_check(model)
     elif args['2a']:
