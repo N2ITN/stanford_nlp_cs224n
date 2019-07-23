@@ -161,6 +161,9 @@ class VocabEntry(object):
         # TODO:
         # Connect `words2charindices()` and `pad_sents_char()` which you've defined in
         # previous parts
+        res = torch.tensor(pad_sents_char(self.words2charindices(
+            sents), char_pad_token=self.char2id['<pad>']), device=device)
+        return torch.transpose(res, 0, 1)
 
         # END YOUR CODE
 
